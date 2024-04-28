@@ -3,7 +3,7 @@ from PIL import ImageFilter
 from time import time,perf_counter
 import numpy as np
 import cv2
-import pyautogui
+#import pyautogui
 import time
 import threading
 import math
@@ -136,6 +136,7 @@ class target_close:
                 if dist < min_dist:
                     min_dist = dist
                     target_center = center
+                    print(f'index {i} stats: {comp[2][i]}')
         return target_center
 
 def main():
@@ -175,11 +176,20 @@ def main():
     
 def test():
     filename = 'img\screen_shot_33.png'
+    ft = target_close()
     with Image.open(filename) as img:
         img.load()
         an = anlys(img.width,img.height)
         an.set_img(img)
-        an.test(img)
+        an.calc_treshold_img()
+        an.calc_conected_commpent()
+        #an.test(img)
+        t = ft.find_target((img.width,img.height), an.commpent)
+        print(f'res = {t},{(img.width//2,img.height//2)}')
+        data = np.array(img)
+        cv2.rectangle(data, (t[0]-10, t[1] - 10), (t[0]+10, t[1] + 10), (0, 255, 0), 3)
+        cv2.imshow("Output", data)
+        cv2.waitKey(0) 
         
 if __name__ == "__main__":
-    main()
+    test()
