@@ -164,7 +164,7 @@ def main():
             an.log_output()
             t = ft.find_target(pos,an.commpent)
             if t != None:
-                t = t[1]+x_offset,t[0]+y_offset
+                t = t[0]+x_offset,t[1]+y_offset
             pos = pos[0]+x_offset,pos[1]+y_offset
             found = 10
         
