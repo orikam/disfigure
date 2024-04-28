@@ -8,16 +8,19 @@ class disfigure:
         self.r = 375
 
 
-def find_p_faster(pos = None):
-    r = 225
+def find_p_faster(pos = None,sc = False,num=0):
+    r = 240
     player = None
     size = r * 1.41
+    size = r * 2
     size = int(size)
     target = None
     enemy = []
-    if pos: 
-        
+    if pos:
+        #img = pyautogui.screenshot(region=(pos[0] - size//2 ,pos[1]- size // 2, size, size))
         img = pyautogui.screenshot(region=(pos[0] - size//2 ,pos[1]- size // 2, size, size))
+        if sc:
+            img.save(rf"C:\Data\roy\my_projects\disfigure\squre\screem_shot_{num}.png")
         
     else:
         img = pyautogui.screenshot()
@@ -34,7 +37,7 @@ def find_p_faster(pos = None):
             else:
                 #print(f'-------------')
                 player = (i % img.width, i // img.width)
-                
+        
         if pos and target == None:        
             if p[0] < 10 and p[1] < 10 and p[2] < 10:
                 cnt = 0
@@ -54,9 +57,16 @@ time.sleep(3)
 #find_player(list_colors)
 pos = None
 found = 10
+count = 0
+num = 1
 while 1:
     #start_time = time.time()
-    pos = find_p_faster(pos)
+    if count == 20:
+        pos = find_p_faster(pos,True,num)
+        num +=1
+        count = 0
+    else:
+        pos = find_p_faster(pos)
     if pos == None:
         found -= 1
     else:
@@ -64,6 +74,7 @@ while 1:
     if found == 0:
         #print('++++++')
         break
+    count+=1
     #print(f"======{pos}")
     #print("--- %s seconds ---" % (time.time() - start_time))
     #pyautogui.moveTo(pos[0]+225,pos[1])
