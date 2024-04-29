@@ -3,7 +3,7 @@ from PIL import ImageFilter
 from time import time,perf_counter
 import numpy as np
 import cv2
-#import pyautogui
+import pyautogui
 import time
 import threading
 import math
@@ -21,19 +21,18 @@ def screenshoot(pos):
     r = 240
     size = r * 2
     size = int(size)
-    print(pos)
     if pos:
         img = pyautogui.screenshot(region=(pos[0] - size//2 ,pos[1]- size // 2, size, size))
     else:
         img = pyautogui.screenshot()
         return img,0 ,0
     return img,pos[0] - size//2 ,pos[1]- size // 2
-
+@timer
 def get_player(img,pos=None): 
     data = np.array(img)
     size = img.width
-    for i in range(0,size,2):
-        for j in range(0,size,2):
+    for i in range(0,img.height -1,2):
+        for j in range(0,img.width-1,2):
             if data[i][j][0] > 230 and data[i][j][1] < 20:
                 
                 return j,i
@@ -56,13 +55,13 @@ class anlys:
         dist_from_center = np.sqrt((X - center[0])**2 + (Y-center[1])**2)
 
         mask = dist_from_center <= radius
-        print(mask.shape)
         return mask
     def calc_treshold_img(self):
         gray_img = self.img.convert("L") 
         gray_data = np.array(gray_img)
         ret,thresh2 = cv2.threshold(gray_data * self.mask,10,255,cv2.THRESH_BINARY_INV)
         self.th_img = thresh2
+        #cv2.imshow("thr",  thresh2) #ooooo
     def calc_conected_commpent(self):
         self.commpent = cv2.connectedComponentsWithStats(self.th_img * self.mask, 4, cv2.CV_32S)
     def test(self,img):
@@ -96,7 +95,7 @@ class anlys:
         
         cv2.imshow("Output", data)
         cv2.waitKey(0) 
-    def log_output(self):
+    def log_output(self, data):
         for l in range(0, self.commpent[0]):
             print(self.commpent[2][l])
             # if this is the first component then we examine the
@@ -119,14 +118,15 @@ class anlys:
             h = self.commpent[2][l, cv2.CC_STAT_HEIGHT]
             area = self.commpent[2][l, cv2.CC_STAT_AREA]
             cX, cY = self.commpent[3][l]
-            #cv2.rectangle(data, (x, y), (x + w, y + h), (0, 255, 0), 3)
-            #cv2.circle(data, (int(cX), int(cY)), 4, (0, 0, 255), -1)
+            cv2.rectangle(data, (x, y), (x + w, y + h), (0, 255, 0), 3)
+            cv2.circle(data, (int(cX), int(cY)), 4, (0, 0, 255), -1)
 
 class target_close:
     def __init__(self):
         pass
+   
     def find_target(self,pos,comp):
-        thr = 8
+        thr = 20
         min_dist = 100000000
         target_center = None
         for i in range(2,comp[0]):
@@ -136,7 +136,6 @@ class target_close:
                 if dist < min_dist:
                     min_dist = dist
                     target_center = center
-                    print(f'index {i} stats: {comp[2][i]}')
         return target_center
 
 def main():
@@ -146,36 +145,58 @@ def main():
     img_size = 1920,1080
     an = None
     ft = target_close()
+    cnt = 0
+    t = None
     while 1:
-        img,x_offset,y_offset = screenshoot(pos)
+        start = time.time()
+        start_full = time.time()
+        img,x_offset,y_offset = screenshoot(pos) # 0.02
+        print("screen_shot  --- %s seconds ---" % (time.time() - start)) 
+        start = time.time()
         pos = get_player(img)
+        print("player  --- %s seconds ---" % (time.time() - start)) 
+        start = time.time()
         if pos == None:
             found -= 1
             print("--------")
         else:
+            #img.save(rf"C:\Data\roy\my_projects\disfigure\test\screem_shot_{cnt}.png")
+            #cnt += 1
+            #continue
             if img.width > 500:
                 continue
             if an == None:
-                an = anlys(480,480)
+                an = anlys(img.width,img.width)
             an.set_img(img)
+            print("set_image  --- %s seconds ---" % (time.time() - start)) 
+            start = time.time()
             an.calc_treshold_img()
+            print("trash  --- %s seconds ---" % (time.time() - start)) 
+            start = time.time()
             an.calc_conected_commpent()
-            print("++++++")
-            an.log_output()
+            print("concted  --- %s seconds ---" % (time.time() - start)) 
+            start = time.time()
             t = ft.find_target(pos,an.commpent)
+            print("find target  --- %s seconds ---" % (time.time() - start)) 
+            start = time.time()
             if t != None:
                 t = t[0]+x_offset,t[1]+y_offset
+                
             pos = pos[0]+x_offset,pos[1]+y_offset
             found = 10
         
         if found == 0:
             #print('++++++')
             break
-        if t: 
-            pyautogui.moveTo(t[0],t[1])
+        if t:
+            start = time.time()
+            pyautogui.moveTo(t[0],t[1],_pause=False)
+            print("moveTo  --- %s seconds ---" % (time.time() - start)) 
+        print("main  --- %s seconds ---" % (time.time() - start_full))    
+        print("===================")
     
 def test():
-    filename = 'img\screen_shot_33.png'
+    filename = 'test\screem_shot_1.png'
     ft = target_close()
     with Image.open(filename) as img:
         img.load()
@@ -184,12 +205,12 @@ def test():
         an.calc_treshold_img()
         an.calc_conected_commpent()
         #an.test(img)
-        t = ft.find_target((img.width,img.height), an.commpent)
-        print(f'res = {t},{(img.width//2,img.height//2)}')
+        t = ft.find_target((img.width//2,img.height//2), an.commpent)
         data = np.array(img)
-        cv2.rectangle(data, (t[0]-10, t[1] - 10), (t[0]+10, t[1] + 10), (0, 255, 0), 3)
+        an.log_output(data)
+        #cv2.rectangle(data, (t[0]-10, t[1] - 10), (t[0]+10, t[1] + 10), (0, 255, 0), 3)
         cv2.imshow("Output", data)
         cv2.waitKey(0) 
         
 if __name__ == "__main__":
-    test()
+    main()
